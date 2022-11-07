@@ -1,6 +1,11 @@
 import serial
 from enum import Enum
 
+# Some useful links
+# https://de.wikipedia.org/wiki/Smart_Message_Language
+# https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/TechnischeRichtlinien/TR03109/TR-03109-1_Anlage_Feinspezifikation_Drahtgebundene_LMN-Schnittstelle_Teilb.pdf?__blob=publicationFile
+
+
 class SmlState(Enum):
     idle = 0
     escape = 1
@@ -15,6 +20,7 @@ class SmlDecoder:
     escapeSequence = b'\x1b\x1b\x1b\x1b'
     device = None
     state = SmlState.idle
+    messages = []
     
     def __init__(self, device):
         self.device = serial.Serial(device, 9600, timeout=3)
@@ -37,6 +43,8 @@ class SmlDecoder:
         val = None
         data_type = self.device.read()[0]
         print("Data byte: ", hex(data_type))
+        if (data_type == 0x1b):
+            val = None
         if (data_type & 0xF0) == 0x70:
             # List
             length = (data_type & 0x0F)
@@ -55,6 +63,18 @@ class SmlDecoder:
             if length > 1:
                 val = self.device.read(length - 1)
                 print("Octet:", val)
+        elif (data_type == 0x52):
+            val = int.from_bytes(self.device.read(1), "big", signed=True)
+            print("Int8: ", val)
+        elif (data_type == 0x53):
+            val = int.from_bytes(self.device.read(2), "big", signed=True)
+            print("Int16: ", val)
+        elif (data_type == 0x55):
+            val = int.from_bytes(self.device.read(4), "big", signed=True)
+            print("Int32: ", val)
+        elif (data_type == 0x59):
+            val = int.from_bytes(self.device.read(8), "big", signed=True)
+            print("Int32: ", val)
         elif (data_type == 0x62):
             val = self.device.read(1)[0]
             print("Uint8: ", val)
@@ -64,17 +84,23 @@ class SmlDecoder:
         elif (data_type == 0x65):
             val = int.from_bytes(self.device.read(4), "big")
             print("Uint32: ", val)
+        elif (data_type == 0x69):
+            val = int.from_bytes(self.device.read(8), "big")
+            print("Uint64: ", val)
         return val
 
     def decodeMessage(self):
-        message = self.decodeObject()
-        print(message)
-        if message:
-            return SmlState.end
-        else:
-            return SmlState.error
+        while True:
+            message = self.decodeObject()
+            if message == None:
+                print("**** End of message ****")
+                break
+            self.messages.append(message)
+        print(self.messages)
+        return SmlState.end
         
-    def readSml(self):
+    def readSml(self, max = -1):
+        n = 0
         while True:
             next_state = SmlState.error
             print(self.state)
@@ -87,15 +113,62 @@ class SmlDecoder:
             elif self.state == SmlState.message:
                 next_state = self.decodeMessage()
             elif self.state == SmlState.end:
-                next_state = self.getMESSmlState.idle
+                n = n + 1
+                if max > 0 and n >= max:
+                    break
+                else:
+                    next_state = SmlState.idle
             else:
                 next_state = SmlState.error
             self.state = next_state
 
+    def interpretBody(self, body):
+        sml_messageBody = {}
+        # PublicOpen.Res
+        if body[0] == 0x00000101:
+            po = body[1]
+            sml_messageBody["type"] = "SML_PublicOpen.Res"
+            sml_messageBody["codepage"] = po[0]
+            sml_messageBody["clientId"] = po[1]
+            sml_messageBody["reqFieldId"] = po[2]
+            sml_messageBody["serverId"] = po[3]
+            sml_messageBody["refTime"] = po[4]
+            sml_messageBody["smlVersion"] = po[5]
+        elif body[0] == 0x00000701:
+            po = body[1]
+            sml_messageBody["type"] = "SML_GetList.Res"
+            sml_messageBody["clientId"] = po[0]
+            sml_messageBody["serverId"] = po[1]
+            sml_messageBody["listName"] = po[2]
+            sml_messageBody["actSensorTime"] = po[3]
+            sml_messageBody["valList"] = po[4]
+            sml_messageBody["listSignature"] = po[5]
+            sml_messageBody["actGatewayTime"] = po[6]
+        elif body[0] == 0x00000201:
+            po = body[1]
+            sml_messageBody["type"] = "SML_PublicClose.Res"
+            sml_messageBody["globalSignature"] = po[0]
+        return sml_messageBody
+        
+    def interpretMessages(self):
+        sml_messages = []
+        for m in self.messages:
+            if isinstance(m, list) and len(m) >= 6:
+                sml_message = {}
+                sml_message["transactionId"] = m[0]
+                sml_message["groupNo"] = m[1]
+                sml_message["abortOnError"] = m[2]
+                sml_message["messageBody"] = self.interpretBody(m[3])
+                sml_message["crc16"] = m[4]
+                sml_message["endOfSmlMsg"] = m[5]
+                sml_messages.append(sml_message)
+        print(sml_messages)
+            
 
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
-    decoder.readSml()
+    decoder.readSml(1)
+    decoder.interpretMessages()
 
 
 if __name__ == "__main__":
