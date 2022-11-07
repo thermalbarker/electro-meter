@@ -19,7 +19,6 @@ class SmlDecoder:
     startMessage = b'\x01\x01\x01\x01'
     escapeSequence = b'\x1b\x1b\x1b\x1b'
     device = None
-    state = SmlState.idle
     messages = []
     
     def __init__(self, device):
@@ -101,27 +100,41 @@ class SmlDecoder:
         
     def readSml(self, max = -1):
         n = 0
+        state = SmlState.idle
         while True:
             next_state = SmlState.error
-            print(self.state)
-            if self.state == SmlState.idle:
+            print(state)
+            if state == SmlState.idle:
                 next_state = self.getEscapeSequence()
-            elif self.state == SmlState.escape:
+            elif state == SmlState.escape:
                 next_state = self.getMessageStart()
-            elif self.state == SmlState.error:
+            elif state == SmlState.error:
                 next_state = SmlState.idle
-            elif self.state == SmlState.message:
+            elif state == SmlState.message:
                 next_state = self.decodeMessage()
-            elif self.state == SmlState.end:
+            elif state == SmlState.end:
                 n = n + 1
+                next_state = SmlState.idle
                 if max > 0 and n >= max:
                     break
-                else:
-                    next_state = SmlState.idle
             else:
                 next_state = SmlState.error
-            self.state = next_state
+            state = next_state
 
+    def interpretList(self, lst):
+        sml_list = []
+        for entry in lst:
+            sml_entry = {}
+            sml_entry["objName"] = entry[0]
+            sml_entry["status"] = entry[1]
+            sml_entry["valTime"] = entry[2]
+            sml_entry["unit"] = entry[3]
+            sml_entry["scaler"] = entry[4]
+            sml_entry["value"] = entry[5]
+            sml_entry["valueSignature"] = entry[6]
+            sml_list.append(sml_entry)
+        return sml_list
+            
     def interpretBody(self, body):
         sml_messageBody = {}
         # PublicOpen.Res
@@ -141,7 +154,7 @@ class SmlDecoder:
             sml_messageBody["serverId"] = po[1]
             sml_messageBody["listName"] = po[2]
             sml_messageBody["actSensorTime"] = po[3]
-            sml_messageBody["valList"] = po[4]
+            sml_messageBody["valList"] = self.interpretList(po[4])
             sml_messageBody["listSignature"] = po[5]
             sml_messageBody["actGatewayTime"] = po[6]
         elif body[0] == 0x00000201:
@@ -152,9 +165,11 @@ class SmlDecoder:
         
     def interpretMessages(self):
         sml_messages = []
-        for m in self.messages:
+        while self.messages:
+            m = self.messages.pop(0)
             if isinstance(m, list) and len(m) >= 6:
                 sml_message = {}
+                sml_message["type"] = "SML_Message"
                 sml_message["transactionId"] = m[0]
                 sml_message["groupNo"] = m[1]
                 sml_message["abortOnError"] = m[2]
@@ -163,13 +178,20 @@ class SmlDecoder:
                 sml_message["endOfSmlMsg"] = m[5]
                 sml_messages.append(sml_message)
         print(sml_messages)
-            
+        return sml_messages
 
+def printValues(sml_messages):
+    for sml_message in sml_messages:
+        if sml_message["messageBody"]["type"] == "SML_GetList.Res":
+            for sml_entry in sml_message["messageBody"]["valList"]:
+                print(sml_entry["value"])
+    
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
-    decoder.readSml(1)
-    decoder.interpretMessages()
-
+    while True:
+        decoder.readSml(1)
+        sml_messages = decoder.interpretMessages()
+        printValues(sml_messages)
 
 if __name__ == "__main__":
     main()
