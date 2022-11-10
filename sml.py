@@ -60,7 +60,7 @@ class SmlListEntry:
         return self.unit
 
     def getTime(self):
-        return valTime.getTime()
+        return self.valTime.getTime()
 
 class SmlList:
     clientId = None
