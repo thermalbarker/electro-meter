@@ -204,7 +204,7 @@ class SmlDecoder:
 
     def interpretTime(self, time):
         sml_time = None
-        if time is not None:
+        if isinstance(time, list) and len(m) >= 1:
             if time[0] == 0x01:
                 # SecIndex
                 sml_time = SmlSecIndex(time[1])
