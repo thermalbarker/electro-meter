@@ -1,4 +1,5 @@
 import serial
+import logging, sys2
 from enum import Enum
 
 # Some useful links
@@ -122,14 +123,14 @@ class SmlDecoder:
     def decodeObject(self):
         val = None
         data_type = self.device.read()[0]
-        print("Data byte: ", hex(data_type))
+        logging.debug("Data byte: ", hex(data_type))
         if (data_type == 0x1b):
             val = None
         if (data_type & 0xF0) == 0x70:
             # List
             length = (data_type & 0x0F)
             val = []
-            print("List length:", length)
+            logging.debug("List length:", length)
             for i in range(length):
                 element = self.decodeObject()
                 if element == None:
@@ -142,41 +143,41 @@ class SmlDecoder:
             val = b''
             if length > 1:
                 val = self.device.read(length - 1)
-                print("Octet:", val)
+                logging.debug("Octet:", val)
         elif (data_type == 0x52):
             val = int.from_bytes(self.device.read(1), "big", signed=True)
-            print("Int8: ", val)
+            logging.debug("Int8: ", val)
         elif (data_type == 0x53):
             val = int.from_bytes(self.device.read(2), "big", signed=True)
-            print("Int16: ", val)
+            logging.debug("Int16: ", val)
         elif (data_type == 0x55):
             val = int.from_bytes(self.device.read(4), "big", signed=True)
-            print("Int32: ", val)
+            logging.debug("Int32: ", val)
         elif (data_type == 0x59):
             val = int.from_bytes(self.device.read(8), "big", signed=True)
-            print("Int32: ", val)
+            logging.debug("Int32: ", val)
         elif (data_type == 0x62):
             val = self.device.read(1)[0]
-            print("Uint8: ", val)
+            logging.debug("Uint8: ", val)
         elif (data_type == 0x63):
             val = int.from_bytes(self.device.read(2), "big")
-            print("Uint16: ", val)
+            logging.debug("Uint16: ", val)
         elif (data_type == 0x65):
             val = int.from_bytes(self.device.read(4), "big")
-            print("Uint32: ", val)
+            logging.debug("Uint32: ", val)
         elif (data_type == 0x69):
             val = int.from_bytes(self.device.read(8), "big")
-            print("Uint64: ", val)
+            logging.debug("Uint64: ", val)
         return val
 
     def decodeMessage(self):
         while True:
             message = self.decodeObject()
             if message == None:
-                print("**** End of message ****")
+                logging.debug("**** End of message ****")
                 break
             self.messages.append(message)
-        print(self.messages)
+        logging.debug(self.messages)
         return SmlState.end
         
     def readSml(self, max = -1):
@@ -184,7 +185,7 @@ class SmlDecoder:
         state = SmlState.idle
         while True:
             next_state = SmlState.error
-            print(state)
+            logging.debug(state)
             if state == SmlState.idle:
                 next_state = self.getEscapeSequence()
             elif state == SmlState.escape:
@@ -239,23 +240,24 @@ class SmlDecoder:
             if isinstance(m, list) and len(m) >= 6:
                 sml_message = SmlMessage(m[0], m[1], m[2], self.interpretBody(m[3]), m[4])
                 sml_messages.append(sml_message)
-        print(sml_messages)
+        logging.debug(sml_messages)
         return sml_messages
 
-def printValues(sml_messages):
+def logging.debugValues(sml_messages):
     for sml_message in sml_messages:
         if type(sml_message.messageBody) is SmlList:
             for sml_entry in sml_message.messageBody.valList:
-                print(sml_entry.getValue())
+                logging.info(sml_entry.getValue())
     
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
     while True:
         decoder.readSml(1)
         sml_messages = decoder.interpretMessages()
-        printValues(sml_messages)
+        logging.debugValues(sml_messages)
 
 if __name__ == "__main__":
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     main()
 
     
