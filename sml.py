@@ -54,13 +54,13 @@ class SmlListEntry:
         return self.objName
 
     def getValue(self):
-        return float(self.value) * 10 ** self.scalar if self.unit is not None else self.value
+        return float(self.value) * 10 ** self.scalar if self.unit is not None else 0.0
     
     def getUnit(self):
         return self.unit
 
     def getTime(self):
-        return self.valTime.getTime()
+        return self.valTime.getTime() if self.valTime is not None else 0
 
 class SmlList:
     clientId = None
