@@ -259,15 +259,15 @@ class SmlDecoder:
         sml_messageBody = None
         # PublicOpen.Res
         if isinstance(body, list) and len(body) >= 2:
-        if body[0] == 0x00000101:
-            po = body[1]
-            sml_messageBody = SmlPublicOpen(po[0], po[1], po[2], po[3], self.interpretTime(po[4]), po[5])
-        elif body[0] == 0x00000701:
-            po = body[1]
-            sml_messageBody = SmlList(po[0], po[1], po[2],self.interpretTime(po[3]), self.interpretList(po[4]), po[5], self.interpretTime(po[6]))
-        elif body[0] == 0x00000201:
-            po = body[1]
-            sml_messageBody = SmlPublicClose(po[0])
+            if body[0] == 0x00000101:
+                po = body[1]
+                sml_messageBody = SmlPublicOpen(po[0], po[1], po[2], po[3], self.interpretTime(po[4]), po[5])
+            elif body[0] == 0x00000701:
+                po = body[1]
+                sml_messageBody = SmlList(po[0], po[1], po[2],self.interpretTime(po[3]), self.interpretList(po[4]), po[5], self.interpretTime(po[6]))
+            elif body[0] == 0x00000201:
+                po = body[1]
+                sml_messageBody = SmlPublicClose(po[0])
         return sml_messageBody
         
     def interpretMessages(self):
