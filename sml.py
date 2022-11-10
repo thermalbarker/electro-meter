@@ -14,12 +14,23 @@ class SmlState(Enum):
     end = 3
     error = 4
 
+class ObisCode(Enum):
+    unknown
+    power
+    meter
+
+class SmlUnit(Enum):
+    W  = 27
+    Wh = 30
+
 class SmlSecIndex:
     secIndex = 0
 
     def __init__(self, secIndex):
         self.secIndex = secIndex
 
+    def getTime(self):
+        return self.secIndex
 
 class SmlListEntry:
     objName = None
@@ -34,13 +45,19 @@ class SmlListEntry:
         self.objName = objName
         self.status = status
         self.valTime = valTime
-        self.unit = unit if unit != b'' else None
+        self.unit = unit
         self.scalar = scalar
         self.value = value
         self.valueSignature = valueSignature
 
     def getValue(self):
         return float(self.value) * 10 ** self.scalar if self.unit is not None else self.value
+    
+    def getUnit(self):
+        return self.unit
+
+    def getTime(self):
+        return time.getTime()
 
 class SmlList:
     clientId = None
@@ -123,14 +140,14 @@ class SmlDecoder:
     def decodeObject(self):
         val = None
         data_type = self.device.read()[0]
-        logging.debug("Data byte: ", hex(data_type))
+        logging.debug("Data byte: %s", hex(data_type))
         if (data_type == 0x1b):
             val = None
         if (data_type & 0xF0) == 0x70:
             # List
             length = (data_type & 0x0F)
             val = []
-            logging.debug("List length:", length)
+            logging.debug("List length: %d", length)
             for i in range(length):
                 element = self.decodeObject()
                 if element == None:
@@ -143,31 +160,31 @@ class SmlDecoder:
             val = b''
             if length > 1:
                 val = self.device.read(length - 1)
-                logging.debug("Octet:", val)
+                logging.debug("Octet: %s", val)
         elif (data_type == 0x52):
             val = int.from_bytes(self.device.read(1), "big", signed=True)
-            logging.debug("Int8: ", val)
+            logging.debug("Int8: %d", val)
         elif (data_type == 0x53):
             val = int.from_bytes(self.device.read(2), "big", signed=True)
-            logging.debug("Int16: ", val)
+            logging.debug("Int16: %d", val)
         elif (data_type == 0x55):
             val = int.from_bytes(self.device.read(4), "big", signed=True)
-            logging.debug("Int32: ", val)
+            logging.debug("Int32: %d", val)
         elif (data_type == 0x59):
             val = int.from_bytes(self.device.read(8), "big", signed=True)
-            logging.debug("Int32: ", val)
+            logging.debug("Int32: %d", val)
         elif (data_type == 0x62):
             val = self.device.read(1)[0]
-            logging.debug("Uint8: ", val)
+            logging.debug("Uint8: %d", val)
         elif (data_type == 0x63):
             val = int.from_bytes(self.device.read(2), "big")
-            logging.debug("Uint16: ", val)
+            logging.debug("Uint16: %d", val)
         elif (data_type == 0x65):
             val = int.from_bytes(self.device.read(4), "big")
-            logging.debug("Uint32: ", val)
+            logging.debug("Uint32: %d", val)
         elif (data_type == 0x69):
             val = int.from_bytes(self.device.read(8), "big")
-            logging.debug("Uint64: ", val)
+            logging.debug("Uint64: %d", val)
         return val
 
     def decodeMessage(self):
@@ -203,6 +220,21 @@ class SmlDecoder:
                 next_state = SmlState.error
             state = next_state
 
+    def interpretName(self, objName):
+        # OBIS codes
+        if objName == b'\x01\x00\x10\x07\x00\xff':
+            return ObisCode.power
+        elif objName == b'\x01\x00\x01\x08\x00\xff':
+            return ObisCode.meter
+        return ObisCode.unknown
+
+    def interpretUnits(self, units):
+        if units == 27:
+            return SmlUnit.W
+        elif units == 30:
+            return SmlUnit.Wh
+        return None
+
     def interpretTime(self, time):
         sml_time = None
         if isinstance(time, list) and len(time) >= 1:
@@ -215,7 +247,7 @@ class SmlDecoder:
     def interpretList(self, lst):
         sml_list = []
         for e in lst:
-            sml_entry = SmlListEntry(e[0], e[1], self.interpretTime(e[2]), e[3], e[4], e[5], e[6])
+            sml_entry = SmlListEntry(e[0], self.interpretName(e[1]), self.interpretTime(e[2]), self.interpretUnits(e[3]), e[4], e[5], e[6])
             sml_list.append(sml_entry)
         return sml_list
             
@@ -247,7 +279,7 @@ def printValues(sml_messages):
     for sml_message in sml_messages:
         if type(sml_message.messageBody) is SmlList:
             for sml_entry in sml_message.messageBody.valList:
-                logging.info(sml_entry.getValue())
+                print(sml_entry.getName(), ": ", sml_entry.getTime(), " ", sml_entry.getValue(), " ", sml_entry.getUnits())
     
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
