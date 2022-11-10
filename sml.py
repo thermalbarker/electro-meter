@@ -33,7 +33,7 @@ class SmlListEntry:
         self.objName = objName
         self.status = status
         self.valTime = valTime
-        self.unit = unit
+        self.unit = unit if unit != b'' else None
         self.scalar = scalar
         self.value = value
         self.valueSignature = valueSignature
@@ -139,7 +139,7 @@ class SmlDecoder:
         elif (data_type & 0xF0) == 0x00:
             # Octet String
             length = (data_type & 0x0F)
-            val = None
+            val = b''
             if length > 1:
                 val = self.device.read(length - 1)
                 print("Octet:", val)
