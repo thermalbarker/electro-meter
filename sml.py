@@ -258,6 +258,7 @@ class SmlDecoder:
     def interpretBody(self, body):
         sml_messageBody = None
         # PublicOpen.Res
+        if isinstance(body, list) and len(body) >= 2:
         if body[0] == 0x00000101:
             po = body[1]
             sml_messageBody = SmlPublicOpen(po[0], po[1], po[2], po[3], self.interpretTime(po[4]), po[5])
