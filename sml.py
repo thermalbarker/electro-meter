@@ -26,7 +26,7 @@ class SmlListEntry:
     valTime = None
     unit = None
     scaler = None
-    value = None
+    value = 0.0
     valueSignature = None
 
     def __init__(self, objName, status, valTime, unit, scalar, value, valueSignature):
@@ -39,7 +39,7 @@ class SmlListEntry:
         self.valueSignature = valueSignature
 
     def getValue():
-        return (float) self.value * 10 ** self.scalar
+        return float(self.value) * 10 ** self.scalar
 
 class SmlList:
     clientId = None
