@@ -1,5 +1,5 @@
 import serial
-import logging, sys2
+import logging, sys
 from enum import Enum
 
 # Some useful links
