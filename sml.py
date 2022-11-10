@@ -38,7 +38,7 @@ class SmlListEntry:
         self.value = value
         self.valueSignature = valueSignature
 
-    def getValue():
+    def getValue(self):
         return float(self.value) * 10 ** self.scalar
 
 class SmlList:
