@@ -15,9 +15,9 @@ class SmlState(Enum):
     error = 4
 
 class ObisCode(Enum):
-    unknown
-    power
-    meter
+    unknown = 0
+    power = 1
+    meter = 2
 
 class SmlUnit(Enum):
     W  = 27
