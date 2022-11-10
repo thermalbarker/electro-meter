@@ -39,7 +39,7 @@ class SmlListEntry:
         self.valueSignature = valueSignature
 
     def getValue(self):
-        return float(self.value) * 10 ** self.scalar
+        return float(self.value) * 10 ** self.scalar if self.unit is not None else self.value
 
 class SmlList:
     clientId = None
@@ -139,7 +139,7 @@ class SmlDecoder:
         elif (data_type & 0xF0) == 0x00:
             # Octet String
             length = (data_type & 0x0F)
-            val = b''
+            val = None
             if length > 1:
                 val = self.device.read(length - 1)
                 print("Octet:", val)
