@@ -54,7 +54,7 @@ class SmlListEntry:
         return self.objName
 
     def getValue(self):
-        return float(self.value) * 10 ** self.scalar if self.unit is not None else 0.0
+        return float(self.value) * 10 ** self.scalar if self.unit is not None else self.value
     
     def getUnits(self):
         return self.unit
@@ -250,7 +250,7 @@ class SmlDecoder:
     def interpretList(self, lst):
         sml_list = []
         for e in lst:
-            sml_entry = SmlListEntry(e[0], self.interpretName(e[1]), self.interpretTime(e[2]), self.interpretUnits(e[3]), e[4], e[5], e[6])
+            sml_entry = SmlListEntry(self.interpretName(e[0]), e[1], self.interpretTime(e[2]), self.interpretUnits(e[3]), e[4], e[5], e[6])
             sml_list.append(sml_entry)
         return sml_list
             
