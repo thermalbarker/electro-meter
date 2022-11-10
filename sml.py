@@ -296,13 +296,15 @@ def getPower(sml_messages):
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
     power_array = []
-    fig = tpl.figure()
     while True:
         decoder.readSml(1)
         sml_messages = decoder.interpretMessages()
         printValues(sml_messages)
-        power_array.append(getPower(sml_messages))
-        fig.plot(range(len(power_array)), power_array, width=50, height=15)
+        pwr = getPower(sml_messages)
+        if pwr > 0.0:
+            power_array.append(pwr)
+        fig = tpl.figure()
+        fig.plot(range(len(power_array)), power_array, width=200, height=80)
         fig.show()
 
 if __name__ == "__main__":
