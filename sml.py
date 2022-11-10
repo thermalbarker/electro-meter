@@ -13,6 +13,87 @@ class SmlState(Enum):
     end = 3
     error = 4
 
+class SmlSecIndex:
+    secIndex = 0
+
+    def __init__(self, secIndex):
+        self.secIndex = secIndex
+
+
+class SmlListEntry:
+    objName = None
+    status = None
+    valTime = None
+    unit = None
+    scaler = None
+    value = None
+    valueSignature = None
+
+    def __init__(self, objName, status, valTime, unit, scalar, value, valueSignature):
+        self.objName = objName
+        self.status = status
+        self.valTime = valTime
+        self.unit = unit
+        self.scalar = scalar
+        self.value = value
+        self.valueSignature = valueSignature
+
+    def getValue():
+        return (float) self.value * 10 ** self.scalar
+
+class SmlList:
+    clientId = None
+    serverId = None
+    listName = None
+    actSensorTime = None
+    valList = None
+    listSignature = None
+    actGatewayTime = None
+
+    def __init__(self, clientId, serverId, listName, actSensorTime, valList, listSignature, actGatewayTime):
+        self.clientId = clientId
+        self.serverId = serverId
+        self.listName = listName
+        self.actSensorTime = actSensorTime
+        self.valList = valList
+        self.listSignature = listSignature
+        self.actGatewayTime = actGatewayTime
+
+class SmlPublicClose:
+    globalSignature = None
+
+    def __init__(self, globalSignature):
+        self.globalSignature = globalSignature
+
+class SmlPublicOpen:
+    codepage = None
+    clientId = None
+    reqFieldId = None
+    serverId = None
+    refTime = None
+    smlVersion = None
+
+    def __init__(self, codepage, clientId, reqFieldId, serverId, refTime, smlVersion):
+        self.codepage = codepage
+        self.clientId = clientId
+        self.reqFieldId = reqFieldId
+        self.serverId = serverId
+        self.refTime = refTime
+        self.smlVersion = smlVersion
+
+class SmlMessage:
+    transactionId = None
+    groupNo = None
+    abortOnError = None
+    messageBody = None
+    crc16 = None
+
+    def __init__(self, transactionId, groupNo, abortOnError, messageBody, crc16):
+        self.transactionId = transactionId
+        self.groupNo = groupNo
+        self.abortOnError = abortOnError
+        self.messageBody = messageBody
+        self.crc16 = crc16
     
 class SmlDecoder:
 
@@ -121,46 +202,34 @@ class SmlDecoder:
                 next_state = SmlState.error
             state = next_state
 
+    def interpretTime(self, time):
+        sml_time = None
+        if time is not None:
+            if time[0] == 0x01:
+                # SecIndex
+                sml_time = SecIndex(time[1])
+            # TODO: support other types
+        return sml_time
+
     def interpretList(self, lst):
         sml_list = []
-        for entry in lst:
-            sml_entry = {}
-            sml_entry["objName"] = entry[0]
-            sml_entry["status"] = entry[1]
-            sml_entry["valTime"] = entry[2]
-            sml_entry["unit"] = entry[3]
-            sml_entry["scaler"] = entry[4]
-            sml_entry["value"] = entry[5]
-            sml_entry["valueSignature"] = entry[6]
+        for e in lst:
+            sml_entry = SmlListEntry(e[0], e[1], self.interpretTime(e[2]), e[3], e[4], e[5], e[6], e[7])
             sml_list.append(sml_entry)
         return sml_list
             
     def interpretBody(self, body):
-        sml_messageBody = {}
+        sml_messageBody = None
         # PublicOpen.Res
         if body[0] == 0x00000101:
             po = body[1]
-            sml_messageBody["type"] = "SML_PublicOpen.Res"
-            sml_messageBody["codepage"] = po[0]
-            sml_messageBody["clientId"] = po[1]
-            sml_messageBody["reqFieldId"] = po[2]
-            sml_messageBody["serverId"] = po[3]
-            sml_messageBody["refTime"] = po[4]
-            sml_messageBody["smlVersion"] = po[5]
+            sml_messageBody = SmlPublicOpen(po[0], po[1], po[2], po[3], self.interpretTime(po[4]), po[5])
         elif body[0] == 0x00000701:
             po = body[1]
-            sml_messageBody["type"] = "SML_GetList.Res"
-            sml_messageBody["clientId"] = po[0]
-            sml_messageBody["serverId"] = po[1]
-            sml_messageBody["listName"] = po[2]
-            sml_messageBody["actSensorTime"] = po[3]
-            sml_messageBody["valList"] = self.interpretList(po[4])
-            sml_messageBody["listSignature"] = po[5]
-            sml_messageBody["actGatewayTime"] = po[6]
+            sml_messageBody = SmlList(po[0], po[1], po[2],self.interpretTime(po[3]), self.interpretList(po[4]), po[5], self.interpretTime(po[6]))
         elif body[0] == 0x00000201:
             po = body[1]
-            sml_messageBody["type"] = "SML_PublicClose.Res"
-            sml_messageBody["globalSignature"] = po[0]
+            sml_messageBody = SmlPublicClose(po[0])
         return sml_messageBody
         
     def interpretMessages(self):
@@ -168,23 +237,16 @@ class SmlDecoder:
         while self.messages:
             m = self.messages.pop(0)
             if isinstance(m, list) and len(m) >= 6:
-                sml_message = {}
-                sml_message["type"] = "SML_Message"
-                sml_message["transactionId"] = m[0]
-                sml_message["groupNo"] = m[1]
-                sml_message["abortOnError"] = m[2]
-                sml_message["messageBody"] = self.interpretBody(m[3])
-                sml_message["crc16"] = m[4]
-                sml_message["endOfSmlMsg"] = m[5]
+                sml_message = SmlMessage(m[0], m[1], m[2], self.interpretBody(m[3]), m[4])
                 sml_messages.append(sml_message)
         print(sml_messages)
         return sml_messages
 
 def printValues(sml_messages):
     for sml_message in sml_messages:
-        if sml_message["messageBody"]["type"] == "SML_GetList.Res":
-            for sml_entry in sml_message["messageBody"]["valList"]:
-                print(sml_entry["value"])
+        if type(sml_message.messageBody) is SmlList:
+            for sml_entry in sml_message.messageBody.valList:
+                print(sml_entry.getValue())
     
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
