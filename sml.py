@@ -243,7 +243,7 @@ class SmlDecoder:
         logging.debug(sml_messages)
         return sml_messages
 
-def logging.debugValues(sml_messages):
+def printValues(sml_messages):
     for sml_message in sml_messages:
         if type(sml_message.messageBody) is SmlList:
             for sml_entry in sml_message.messageBody.valList:
@@ -254,7 +254,7 @@ def main():
     while True:
         decoder.readSml(1)
         sml_messages = decoder.interpretMessages()
-        logging.debugValues(sml_messages)
+        printValues(sml_messages)
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
