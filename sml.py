@@ -56,7 +56,7 @@ class SmlListEntry:
     def getValue(self):
         return float(self.value) * 10 ** self.scalar if self.unit is not None else 0.0
     
-    def getUnit(self):
+    def getUnits(self):
         return self.unit
 
     def getTime(self):
