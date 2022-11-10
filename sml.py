@@ -207,7 +207,7 @@ class SmlDecoder:
         if time is not None:
             if time[0] == 0x01:
                 # SecIndex
-                sml_time = SecIndex(time[1])
+                sml_time = SmlSecIndex(time[1])
             # TODO: support other types
         return sml_time
 
