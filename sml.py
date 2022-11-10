@@ -1,6 +1,7 @@
 import serial
 import logging, sys
 from enum import Enum
+import termplotlib as tpl
 
 # Some useful links
 # https://de.wikipedia.org/wiki/Smart_Message_Language
@@ -283,13 +284,26 @@ def printValues(sml_messages):
         if type(sml_message.messageBody) is SmlList:
             for sml_entry in sml_message.messageBody.valList:
                 print(sml_entry.getName(), ": ", sml_entry.getTime(), " ", sml_entry.getValue(), " ", sml_entry.getUnits())
+
+def getPower(sml_messages):
+    for sml_message in sml_messages:
+        if type(sml_message.messageBody) is SmlList:
+            for sml_entry in sml_message.messageBody.valList:
+                if sml_entry.getUnits() == SmlUnit.W:
+                    return sml_entry.getValue()
+    return 0.0
     
 def main():
     decoder = SmlDecoder("/dev/ttyUSB0")
+    power_array = []
+    fig = tpl.figure()
     while True:
         decoder.readSml(1)
         sml_messages = decoder.interpretMessages()
         printValues(sml_messages)
+        power_array.append(getPower(sml_messages))
+        fig.plot(range(len(power_array)), power_array, width=50, height=15)
+        fig.show()
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
