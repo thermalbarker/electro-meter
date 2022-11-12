@@ -4,7 +4,8 @@ import sml
 import db
 
 app = Flask(__name__)
-el_db = db.Db()
+
+db_read = db.Db()
 
 @app.route('/')
 def hello_world():
@@ -20,10 +21,15 @@ def readingCallback(sml_messages, data):
     data.add(secIndex, power, energy)
     printLatest(data)
 
+def startReading(decoder):
+    db_write = db.Db()
+    db_write.setup()
+    decoder.readSml(readingCallback, db_write)
+
 if __name__ == '__main__':
-    el_db.setup()
+    db_read.setup()
     decoder = sml.SmlDecoder("/dev/ttyUSB0")
-    bg_thread = threading.Thread(target = decoder.readSml, args = (readingCallback, el_db))
+    bg_thread = threading.Thread(target = startReading, args = decoder)
     bg_thread.start()
     app.run()
     decoder.stopReading()
