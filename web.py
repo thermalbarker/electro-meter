@@ -13,6 +13,14 @@ def hello_world():
     db_read.disconnect()
     return "Time: {0} Power: {1} Total: {2}".format(secIndex, power, energy)
 
+@app.route('/api', methods=['GET'])
+def get_latest():
+    db_read = db.Db()
+    db_read.setup()
+    reading = db_read.getLatestDict()
+    db_read.disconnect()
+    return jsonify(reading)
+
 def printLatest(data):
     t, power, energy = data.getLatest()
     print(t, power, energy)
