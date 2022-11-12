@@ -204,7 +204,7 @@ class SmlDecoder:
         logging.debug(self.messages)
         return SmlState.end
         
-    def readSml(self, callback, max = -1):
+    def readSml(self, callback, data, max = -1):
         n = 0
         self.stopping = False
         state = SmlState.idle
@@ -222,7 +222,7 @@ class SmlDecoder:
             elif state == SmlState.end:
                 n = n + 1
                 next_state = SmlState.idle
-                callback(self.interpretMessages())
+                callback(self.interpretMessages(), data)
                 if max > 0 and n >= max:
                     break
             else:

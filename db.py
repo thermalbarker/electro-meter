@@ -7,7 +7,7 @@ class Db:
         self.connection = sqlite3.connect(file)
 
     def setup(self):
-        cur = connection.cursor()
+        cur = self.connection.cursor()
         cur.execute("""
         CREATE TABLE IF NOT EXISTS readings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,9 +17,10 @@ class Db:
             energy_Wh REAL NOT_NULL
         );
         """)
-        cur.commit()
+        self.connection.commit()
     
     def add(self, secIndex, power, energy):
         cur = self.connection.cursor()
-        cur.execute("INSERT INTO readings (secIndex, power_W, energy_Wh) VALUES (?,?,?))", secIndex, power, energy)
-        cur.commit()
+        cur.execute("INSERT INTO readings (secIndex, power_W, energy_Wh) VALUES (?,?,?)",
+                    (secIndex, power, energy))
+        self.connection.commit()

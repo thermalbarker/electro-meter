@@ -2,7 +2,7 @@ import sml
 import db
 import logging, sys
 
-db = None
+el_db = None
 
 def printValues(sml_messages):
     for sml_message in sml_messages:
@@ -25,15 +25,16 @@ def getReading(sml_messages):
                     energy = sml_entry.getValue()
     return secIndex, power, energy
 
-def readingCallback(sml_messages):
+def readingCallback(sml_messages, data):
     printValues(sml_messages)
     secIndex, power, energy = getReading(sml_messages)
-    db.add(secIndex, power, energy)
+    data.add(secIndex, power, energy)
 
 def main():
-    db.setup()
+    el_db = db.Db()
+    el_db.setup()
     decoder = sml.SmlDecoder("/dev/ttyUSB0")
-    decoder.readSml(readingCallback)
+    decoder.readSml(readingCallback, el_db)
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
