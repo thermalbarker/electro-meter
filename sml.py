@@ -286,3 +286,17 @@ class SmlDecoder:
         return sml_messages
 
 
+def getReading(sml_messages):
+    secIndex = -1
+    power = 0.0
+    energy = 0.0
+    for sml_message in sml_messages:
+        if type(sml_message.messageBody) is SmlList:
+            for sml_entry in sml_message.messageBody.valList:
+                if sml_entry.getTime() >= 0:
+                    secIndex = sml_entry.getTime()
+                if sml_entry.getUnits() == SmlUnit.W:
+                    power = sml_entry.getValue()
+                if sml_entry.getUnits() == SmlUnit.Wh:
+                    energy = sml_entry.getValue()
+    return secIndex, power, energy
