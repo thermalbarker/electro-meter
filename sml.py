@@ -1,7 +1,6 @@
 import serial
 import logging, sys
 from enum import Enum
-import termplotlib as tpl
 
 # Some useful links
 # https://de.wikipedia.org/wiki/Smart_Message_Language
@@ -123,9 +122,13 @@ class SmlDecoder:
     escapeSequence = b'\x1b\x1b\x1b\x1b'
     device = None
     messages = []
+    stopping = False
     
     def __init__(self, device):
         self.device = serial.Serial(device, 9600, timeout=3)
+
+    def stopReading(self):
+        self.stopping = True
 
     def getEscapeSequence(self):
         escape = self.device.read_until(self.escapeSequence)
@@ -201,10 +204,11 @@ class SmlDecoder:
         logging.debug(self.messages)
         return SmlState.end
         
-    def readSml(self, max = -1):
+    def readSml(self, callback, max = -1):
         n = 0
+        self.stopping = False
         state = SmlState.idle
-        while True:
+        while not self.stopping:
             next_state = SmlState.error
             logging.debug(state)
             if state == SmlState.idle:
@@ -218,6 +222,7 @@ class SmlDecoder:
             elif state == SmlState.end:
                 n = n + 1
                 next_state = SmlState.idle
+                callback(self.interpretMessages())
                 if max > 0 and n >= max:
                     break
             else:
@@ -280,36 +285,4 @@ class SmlDecoder:
         logging.debug(sml_messages)
         return sml_messages
 
-def printValues(sml_messages):
-    for sml_message in sml_messages:
-        if type(sml_message.messageBody) is SmlList:
-            for sml_entry in sml_message.messageBody.valList:
-                print(sml_entry.getName(), ": ", sml_entry.getTime(), " ", sml_entry.getValue(), " ", sml_entry.getUnits())
 
-def getPower(sml_messages):
-    for sml_message in sml_messages:
-        if type(sml_message.messageBody) is SmlList:
-            for sml_entry in sml_message.messageBody.valList:
-                if sml_entry.getUnits() == SmlUnit.W:
-                    return sml_entry.getValue()
-    return 0.0
-    
-def main():
-    decoder = SmlDecoder("/dev/ttyUSB0")
-    power_array = []
-    while True:
-        decoder.readSml(1)
-        sml_messages = decoder.interpretMessages()
-        printValues(sml_messages)
-        pwr = getPower(sml_messages)
-        if pwr > 0.0:
-            power_array.append(pwr)
-        fig = tpl.figure()
-        fig.plot(range(len(power_array)), power_array, width=200, height=80)
-        fig.show()
-
-if __name__ == "__main__":
-    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-    main()
-
-    
