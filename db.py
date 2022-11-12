@@ -24,3 +24,9 @@ class Db:
         cur.execute("INSERT INTO readings (secIndex, power_W, energy_Wh) VALUES (?,?,?)",
                     (secIndex, power, energy))
         self.connection.commit()
+
+    def getLatest(self):
+        cur = self.connection.cursor()
+        cur.execute("SELECT * FROM readings ORDER BY created DESC LIMIT 1;")
+        rowid, created, secIndex, power, energy = cur.fetchone()
+        return created, power, energy

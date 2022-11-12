@@ -4,11 +4,9 @@ import logging, sys
 
 el_db = None
 
-def printValues(sml_messages):
-    for sml_message in sml_messages:
-        if type(sml_message.messageBody) is sml.SmlList:
-            for sml_entry in sml_message.messageBody.valList:
-                print(sml_entry.getName(), ": ", sml_entry.getTime(), " ", sml_entry.getValue(), " ", sml_entry.getUnits())
+def printLatest(data):
+    secIndex, power, energy = data.getLatest()
+    print(secIndex, power, energy)
 
 def getReading(sml_messages):
     secIndex = -1
@@ -26,9 +24,9 @@ def getReading(sml_messages):
     return secIndex, power, energy
 
 def readingCallback(sml_messages, data):
-    printValues(sml_messages)
     secIndex, power, energy = getReading(sml_messages)
     data.add(secIndex, power, energy)
+    printLatest(data)
 
 def main():
     el_db = db.Db()
