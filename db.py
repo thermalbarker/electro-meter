@@ -35,5 +35,20 @@ class Db:
         created, power, energy = self.getLatest()
         return { "time": created, "power": power, "energy": energy }
 
+    def getReadings(self, limit = -1):
+        cur = self.connection.cursor()
+        cur.execute("SELECT * FROM readings ORDER BY created DESC LIMIT ?", (limit, ))
+        rows = cur.fetchall()
+        times = []
+        powers = []
+        energies = []
+        for row in rows:
+            rowid, created, secIndex, power, energy = row
+            times.append(created)
+            powers.append(power)
+            energies.append(energy)
+        
+        return { "times": times, "powers": powers, "energies": energies }
+
     def disconnect(self):
         self.connection.close()
