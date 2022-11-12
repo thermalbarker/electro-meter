@@ -3,15 +3,15 @@ import logging, sys
 
 def printValues(sml_messages):
     for sml_message in sml_messages:
-        if type(sml_message.messageBody) is SmlList:
+        if type(sml_message.messageBody) is sml.SmlList:
             for sml_entry in sml_message.messageBody.valList:
                 print(sml_entry.getName(), ": ", sml_entry.getTime(), " ", sml_entry.getValue(), " ", sml_entry.getUnits())
 
 def getPower(sml_messages):
     for sml_message in sml_messages:
-        if type(sml_message.messageBody) is SmlList:
+        if type(sml_message.messageBody) is sml.SmlList:
             for sml_entry in sml_message.messageBody.valList:
-                if sml_entry.getUnits() == SmlUnit.W:
+                if sml_entry.getUnits() == sml.SmlUnit.W:
                     return sml_entry.getValue()
     return 0.0
     
