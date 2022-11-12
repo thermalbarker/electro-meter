@@ -30,3 +30,6 @@ class Db:
         cur.execute("SELECT * FROM readings ORDER BY created DESC LIMIT 1;")
         rowid, created, secIndex, power, energy = cur.fetchone()
         return created, power, energy
+
+    def disconnect(self):
+        self.connection.close()
