@@ -147,14 +147,12 @@ class SmlDecoder:
     def decodeObject(self):
         val = None
         data_type = self.device.read()[0]
-        logging.debug("Data byte: %s", hex(data_type))
         if (data_type == 0x1b):
             val = None
         if (data_type & 0xF0) == 0x70:
             # List
             length = (data_type & 0x0F)
             val = []
-            logging.debug("List length: %d", length)
             for i in range(length):
                 element = self.decodeObject()
                 if element == None:
@@ -167,38 +165,28 @@ class SmlDecoder:
             val = b''
             if length > 1:
                 val = self.device.read(length - 1)
-                logging.debug("Octet: %s", val)
         elif (data_type == 0x52):
             val = int.from_bytes(self.device.read(1), "big", signed=True)
-            logging.debug("Int8: %d", val)
         elif (data_type == 0x53):
             val = int.from_bytes(self.device.read(2), "big", signed=True)
-            logging.debug("Int16: %d", val)
         elif (data_type == 0x55):
             val = int.from_bytes(self.device.read(4), "big", signed=True)
-            logging.debug("Int32: %d", val)
         elif (data_type == 0x59):
             val = int.from_bytes(self.device.read(8), "big", signed=True)
-            logging.debug("Int32: %d", val)
         elif (data_type == 0x62):
             val = self.device.read(1)[0]
-            logging.debug("Uint8: %d", val)
         elif (data_type == 0x63):
             val = int.from_bytes(self.device.read(2), "big")
-            logging.debug("Uint16: %d", val)
         elif (data_type == 0x65):
             val = int.from_bytes(self.device.read(4), "big")
-            logging.debug("Uint32: %d", val)
         elif (data_type == 0x69):
             val = int.from_bytes(self.device.read(8), "big")
-            logging.debug("Uint64: %d", val)
         return val
 
     def decodeMessage(self):
         while True:
             message = self.decodeObject()
             if message == None:
-                logging.debug("**** End of message ****")
                 break
             self.messages.append(message)
         logging.debug(self.messages)
@@ -282,7 +270,6 @@ class SmlDecoder:
             if isinstance(m, list) and len(m) >= 6:
                 sml_message = SmlMessage(m[0], m[1], m[2], self.interpretBody(m[3]), m[4])
                 sml_messages.append(sml_message)
-        logging.debug(sml_messages)
         return sml_messages
 
 

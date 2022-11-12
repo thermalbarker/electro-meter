@@ -1,20 +1,21 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
+import sys
+import logging
+import asyncio
 import threading
 import json
 import sml
 import db
-import ws
+from flask_sock import Sock
 
 app = Flask(__name__)
+sock = Sock(app)
+
+clients = set()
 
 @app.route('/')
 def hello_world():
-    db_read = db.Db()
-    db_read.setup()
-    secIndex, power, energy = db_read.getLatest()
-    db_read.disconnect()
-    #return "Time: {0} Power: {1} Total: {2}".format(secIndex, power, energy)
-    return send_from_directory('web', 'index.html')
+    return render_template("index.html")
 
 @app.route('/api/reading', methods=['GET'])
 def get_latest():
@@ -34,25 +35,35 @@ def get_readings():
     db_read.disconnect()
     return jsonify(reading)
 
+@sock.route('/sock')
+def sock(ws):
+    clients.add(ws)
+    while True:
+        try:
+            data = ws.receive()
+        except:
+            clients.remove(ws)
+            break
+
 def printLatest(data):
     t, power, energy = data.getLatest()
     print(t, power, energy)
 
 def readingCallback(sml_messages, data):
-    db_write, ws_server = data
+    db_write, connections = data
     secIndex, power, energy = sml.getReading(sml_messages)
     # Save to DB
     db_write.add(secIndex, power, energy)
     printLatest(db_write)
     # Broadcast to sockets
-    ws_server.send_to_clients(json.dumps({ "secIndex": secIndex, "power": power, "energy": energy }))
-
+    for client in connections:
+        client.send(json.dumps({ "secIndex": secIndex, "power": power, "energy": energy }))
+    
 def startReading(decoder):
-    ws_server = ws.Server()
     db_write = db.Db()
     db_write.setup()
 
-    data = (db_write, ws_server)
+    data = (db_write, clients)
     decoder.readSml(readingCallback, data)
     db_write.disconnect()
     
