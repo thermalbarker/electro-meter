@@ -13,11 +13,19 @@ def hello_world():
     db_read.disconnect()
     return "Time: {0} Power: {1} Total: {2}".format(secIndex, power, energy)
 
-@app.route('/api', methods=['GET'])
+@app.route('/api/reading', methods=['GET'])
 def get_latest():
     db_read = db.Db()
     db_read.setup()
     reading = db_read.getLatestDict()
+    db_read.disconnect()
+    return jsonify(reading)
+
+@app.route('/api/readings', methods=['GET'])
+def get_readings():
+    db_read = db.Db()
+    db_read.setup()
+    reading = db_read.getReadings()
     db_read.disconnect()
     return jsonify(reading)
 
