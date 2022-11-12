@@ -31,5 +31,9 @@ class Db:
         rowid, created, secIndex, power, energy = cur.fetchone()
         return created, power, energy
 
+    def getLatestDict(self):
+        created, power, energy = self.getLatest()
+        return { "time": created, "power": power, "energy": energy }
+
     def disconnect(self):
         self.connection.close()
